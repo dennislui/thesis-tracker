@@ -1,0 +1,10 @@
+# Never commit credentials to GitHub
+github_credentials.json
+ 
+# macOS
+.DS_Store
+ 
+# Editor files
+.vscode/
+*.swp
+ 
