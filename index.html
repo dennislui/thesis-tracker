@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thesis Writing Tracker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #21262d;
+      --text: #e6edf3;
+      --muted: #7d8590;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --green-dim: #1a4a26;
+      --amber: #d29922;
+      --amber-dim: #4a3800;
+      --purple: #a371f7;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      margin-bottom: 2.5rem;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .doc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .doc-badge svg { opacity: 0.7; }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 0.3rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .last-updated {
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.3rem 0.7rem;
+      white-space: nowrap;
+      align-self: flex-start;
+    }
+
+    /* Stat Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.2rem 1.4rem;
+      transition: border-color 0.2s;
+    }
+
+    .stat-card:hover { border-color: #30363d; }
+
+    .stat-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+
+    .stat-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .stat-card.words .stat-value  { color: var(--accent); }
+    .stat-card.progress .stat-value { color: var(--green); }
+    .stat-card.streak .stat-value  { color: var(--amber); }
+    .stat-card.days .stat-value   { color: var(--purple); }
+
+    /* Progress Section */
+    .progress-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.4rem 1.6rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.9rem;
+    }
+
+    .progress-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .progress-fraction {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .progress-fraction span { color: var(--text); font-weight: 600; }
+
+    .progress-bar-bg {
+      background: var(--bg);
+      border-radius: 999px;
+      height: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #238636, #3fb950);
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .progress-milestones {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.5rem;
+    }
+
+    .milestone {
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    /* Pace Info */
+    .pace-row {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .pace-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .pace-label { font-size: 0.72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .pace-val   { font-size: 1rem; font-weight: 700; color: var(--text); }
+
+    /* Daily Insight */
+    .insight-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 10px;
+      padding: 1.3rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .insight-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.7rem;
+    }
+
+    .insight-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+    }
+
+    .insight-date {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    .insight-text {
+      font-size: 0.92rem;
+      line-height: 1.65;
+      color: var(--text);
+    }
+
+    /* Chart */
+    .chart-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.4rem 1.6rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 1.2rem;
+    }
+
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+
+    /* Loading state */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 60vh;
+      gap: 1rem;
+    }
+
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: #2d1b1b;
+      border: 1px solid #5c2424;
+      border-radius: 10px;
+      padding: 1.2rem 1.5rem;
+      color: #f85149;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    /* Streak flame animation */
+    @keyframes flicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+    .streak-icon { display: inline-block; animation: flicker 1.5s ease-in-out infinite; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      h1 { font-size: 1.4rem; }
+      .stat-value { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container" id="app">
+  <div class="loading">
+    <div class="spinner"></div>
+    <span style="color:var(--muted);font-size:0.9rem;">Loading your progress...</span>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const DATA_URL = './data.json';
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function daysBetween(dateStr1, dateStr2) {
+  const d1 = new Date(dateStr1 + 'T00:00:00');
+  const d2 = new Date(dateStr2 + 'T00:00:00');
+  return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+}
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatNum(n) {
+  return n.toLocaleString();
+}
+
+function computeStreak(history) {
+  if (!history || history.length < 2) return history?.length || 0;
+  const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
+  let streak = 1;
+  for (let i = sorted.length - 1; i >= 1; i--) {
+    const dayDiff = daysBetween(sorted[i - 1].date, sorted[i].date);
+    const wordDiff = sorted[i].wordCount - sorted[i - 1].wordCount;
+    if (dayDiff === 1 && wordDiff > 0) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+  // Check if the most recent entry is today or yesterday; otherwise streak is broken
+  const last = sorted[sorted.length - 1];
+  const today = todayStr();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+  if (last.date !== today && last.date !== yesterdayStr) return 0;
+  return streak;
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function render(data) {
+  const { target, deadline, docTitle, history } = data;
+  const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));
+  const latest = sorted[sorted.length - 1];
+
+  const wordCount    = latest.wordCount;
+  const pct          = ((wordCount / target) * 100).toFixed(1);
+  const daysLeft     = daysBetween(todayStr(), deadline);
+  const wordsLeft    = target - wordCount;
+  const streak       = computeStreak(history);
+  const wordsPerDay  = daysLeft > 0 ? Math.ceil(wordsLeft / daysLeft) : 0;
+  const projDays     = sorted.length >= 2
+    ? Math.ceil(wordsLeft / Math.max(1,
+        (sorted[sorted.length-1].wordCount - sorted[0].wordCount) /
+        Math.max(1, daysBetween(sorted[0].date, sorted[sorted.length-1].date))
+      ))
+    : null;
+
+  const streakLabel  = streak === 1 ? '1 day' : `${streak} days`;
+  const insight      = latest.insight || 'No insight yet — check back after the next daily update.';
+  const insightDate  = formatDate(latest.date);
+  const lastUpdated  = formatDate(latest.date);
+
+  // Chart data
+  const chartLabels  = sorted.map(e => {
+    const d = new Date(e.date + 'T00:00:00');
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  });
+  const chartData    = sorted.map(e => e.wordCount);
+
+  // Render
+  document.getElementById('app').innerHTML = `
+    <header>
+      <div class="header-top">
+        <div>
+          <div class="doc-badge">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"/>
+            </svg>
+            Google Doc · ${docTitle || 'Introduction'}
+          </div>
+          <h1>Thesis Writing Tracker</h1>
+          <p class="subtitle">Introduction · Target: ${formatNum(target)} words · Deadline: Sept 1, 2026</p>
+        </div>
+        <div class="last-updated">Updated ${lastUpdated}</div>
+      </div>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card words">
+        <div class="stat-label">Word Count</div>
+        <div class="stat-value">${formatNum(wordCount)}</div>
+        <div class="stat-sub">${formatNum(wordsLeft)} words remaining</div>
+      </div>
+      <div class="stat-card progress">
+        <div class="stat-label">Completion</div>
+        <div class="stat-value">${pct}%</div>
+        <div class="stat-sub">of ${formatNum(target)} word target</div>
+      </div>
+      <div class="stat-card streak">
+        <div class="stat-label">Writing Streak</div>
+        <div class="stat-value"><span class="streak-icon">🔥</span> ${streakLabel}</div>
+        <div class="stat-sub">${streak > 1 ? 'consecutive days writing' : 'keep it going!'}</div>
+      </div>
+      <div class="stat-card days">
+        <div class="stat-label">Days to Deadline</div>
+        <div class="stat-value">${daysLeft}</div>
+        <div class="stat-sub">until September 1st, 2026</div>
+      </div>
+    </div>
+
+    <div class="progress-section">
+      <div class="progress-header">
+        <div class="progress-title">Overall Progress</div>
+        <div class="progress-fraction"><span>${formatNum(wordCount)}</span> / ${formatNum(target)} words</div>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="prog-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-milestones">
+        <span class="milestone">0</span>
+        <span class="milestone">25% · 4,500</span>
+        <span class="milestone">50% · 9,000</span>
+        <span class="milestone">75% · 13,500</span>
+        <span class="milestone">18,000</span>
+      </div>
+      <div class="pace-row">
+        <div class="pace-item">
+          <span class="pace-label">Required pace</span>
+          <span class="pace-val">${formatNum(wordsPerDay)} words/day</span>
+        </div>
+        ${projDays !== null ? `
+        <div class="pace-item">
+          <span class="pace-label">Projected finish</span>
+          <span class="pace-val">${projDays <= 0 ? 'On track!' : projDays + ' days at current pace'}</span>
+        </div>` : ''}
+        <div class="pace-item">
+          <span class="pace-label">Days tracked</span>
+          <span class="pace-val">${sorted.length} ${sorted.length === 1 ? 'day' : 'days'}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="insight-section">
+      <div class="insight-header">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="#58a6ff">
+          <path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7-3.25v2.992l2.028.812a.75.75 0 0 1-.557 1.392l-2.5-1A.751.751 0 0 1 7 8.25v-3.5a.75.75 0 0 1 1.5 0Z"/>
+        </svg>
+        <span class="insight-label">Daily Insight from Claude</span>
+        <span class="insight-date">${insightDate}</span>
+      </div>
+      <p class="insight-text">${insight}</p>
+    </div>
+
+    <div class="chart-section">
+      <div class="section-title">Word Count History</div>
+      <div class="chart-wrap">
+        <canvas id="wc-chart"></canvas>
+      </div>
+    </div>
+
+    <footer>
+      Powered by <a href="https://claude.ai" target="_blank">Claude</a> &amp; GitHub Pages ·
+      <a href="https://docs.google.com/document/d/1yDRVeYzLPLKFpODZJdvkjqppWw94ryV6otT7ae8tneY/edit" target="_blank">Open Google Doc</a>
+    </footer>
+  `;
+
+  // Animate progress bar
+  setTimeout(() => {
+    document.getElementById('prog-fill').style.width = pct + '%';
+  }, 100);
+
+  // Render chart
+  const ctx = document.getElementById('wc-chart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartLabels,
+      datasets: [{
+        label: 'Word count',
+        data: chartData,
+        borderColor: '#58a6ff',
+        backgroundColor: 'rgba(88,166,255,0.08)',
+        borderWidth: 2,
+        pointBackgroundColor: '#58a6ff',
+        pointRadius: chartData.length === 1 ? 5 : 3,
+        pointHoverRadius: 6,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1c2128',
+          borderColor: '#30363d',
+          borderWidth: 1,
+          titleColor: '#e6edf3',
+          bodyColor: '#7d8590',
+          callbacks: {
+            label: ctx => ` ${ctx.parsed.y.toLocaleString()} words`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#21262d' },
+          ticks: { color: '#7d8590', font: { size: 11 } }
+        },
+        y: {
+          grid: { color: '#21262d' },
+          ticks: {
+            color: '#7d8590',
+            font: { size: 11 },
+            callback: v => v.toLocaleString()
+          },
+          min: 0,
+        }
+      }
+    }
+  });
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const res = await fetch(DATA_URL + '?t=' + Date.now());
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    render(data);
+  } catch (err) {
+    document.getElementById('app').innerHTML = `
+      <header style="margin-bottom:1.5rem">
+        <h1>Thesis Writing Tracker</h1>
+        <p class="subtitle" style="margin-top:0.3rem">Introduction · Target: 18,000 words</p>
+      </header>
+      <div class="error-box">
+        <strong>Could not load data.json</strong><br><br>
+        This usually means one of two things:<br>
+        1. You are opening this file locally (file://) — try hosting it on GitHub Pages instead.<br>
+        2. The data.json file is missing from the repo — make sure both files are committed.<br><br>
+        <span style="color:#7d8590;font-size:0.82rem;">Error: ${err.message}</span>
+      </div>
+    `;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
